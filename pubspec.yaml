@@ -1,0 +1,53 @@
+name: sms_user_consent
+description: Request user's phone number (supports dual sim) and/or consent to read SMS without adding any permissions
+version: 0.1.0
+repository: https://github.com/pharshdev/sms_user_consent
+
+environment:
+  sdk: ">=3.2.0 <3.4.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: dev.pharsh.sms_user_consent
+        pluginClass: SmsUserConsentPlugin
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
