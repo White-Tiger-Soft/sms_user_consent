@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:sms_user_consent/sms_user_consent.dart';
 
@@ -19,8 +17,14 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     smsUserConsent = SmsUserConsent(
-        phoneNumberListener: () => setState(() {}),
-        smsListener: () => setState(() {}));
+      phoneNumberListener: () => setState(() {}),
+      smsListener: () => setState(() {
+        final sms = smsUserConsent.receivedSms.toString();
+        var snackBar = SnackBar(content: Text(sms));
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      }),
+    );
+    smsUserConsent.requestSms();
   }
 
   @override
