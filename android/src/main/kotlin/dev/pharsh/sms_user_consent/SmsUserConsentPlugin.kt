@@ -141,8 +141,10 @@ class SmsUserConsentPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                             if (contentIntent == null) {
                                 return;
                             }
-                            val activityName = mActivity.callingActivity;
+
                             val flags = contentIntent.flags;
+                            val packageManager = mActivity.packageManager;
+                            val name = contentIntent.resolveActivity(packageManager);
 
                             // remove the grant URI permissions in the untrusted Intent
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -150,9 +152,9 @@ class SmsUserConsentPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
                                 contentIntent.removeFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                             }
 
-                            if (activityName != null &&
-                                activityName.packageName == "com.google.android.gms" &&
-                                activityName.className == "com.google.android.gms.auth.api.phone.ui.UserConsentPromptActivity" &&
+                            if (name != null &&
+                                name.packageName == "com.google.android.gms" &&
+                                name.className == "com.google.android.gms.auth.api.phone.ui.UserConsentPromptActivity" &&
                                 (flags and Intent.FLAG_GRANT_READ_URI_PERMISSION) == 0 &&
                                 (flags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION) == 0
                             ) {
