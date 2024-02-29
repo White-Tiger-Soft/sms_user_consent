@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
+import androidx.core.content.ContextCompat
 import com.google.android.gms.auth.api.credentials.Credential
 import com.google.android.gms.auth.api.credentials.Credentials
 import com.google.android.gms.auth.api.credentials.HintRequest
@@ -45,14 +46,32 @@ class SmsUserConsentPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             }
 
             "requestSms" -> {
+                val listenToBroadcastsFromOtherApps = true
+                val receiverFlags = if (listenToBroadcastsFromOtherApps) {
+                    ContextCompat.RECEIVER_EXPORTED
+                } else {
+                    ContextCompat.RECEIVER_NOT_EXPORTED
+                }
+
                 SmsRetriever.getClient(mActivity.applicationContext)
                     .startSmsUserConsent(call.argument("senderPhoneNumber"))
-                mActivity.registerReceiver(
-                    smsVerificationReceiver,
-                    IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION),
-                    SmsRetriever.SEND_PERMISSION,
-                    null
-                )
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    mActivity.registerReceiver(
+                        smsVerificationReceiver,
+                        IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION),
+                        SmsRetriever.SEND_PERMISSION,
+                        null,
+                        receiverFlags,
+                    )
+                } else {
+                    mActivity.registerReceiver(
+                        smsVerificationReceiver,
+                        IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION),
+                        SmsRetriever.SEND_PERMISSION,
+                        null,
+                    )
+                }
                 result.success(null)
             }
         }
