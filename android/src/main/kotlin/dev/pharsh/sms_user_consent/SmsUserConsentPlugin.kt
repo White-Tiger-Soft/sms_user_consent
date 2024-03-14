@@ -1,16 +1,19 @@
 package dev.pharsh.sms_user_consent
 
 import android.app.Activity
-import android.content.*
+import android.content.ActivityNotFoundException
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
-import androidx.annotation.NonNull
+import androidx.core.content.ContextCompat
 import com.google.android.gms.auth.api.credentials.Credential
 import com.google.android.gms.auth.api.credentials.Credentials
 import com.google.android.gms.auth.api.credentials.HintRequest
 import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.api.Status
-
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -18,6 +21,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
+
 
 /** SmsUserConsentPlugin */
 class SmsUserConsentPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
@@ -29,12 +33,12 @@ class SmsUserConsentPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
         private const val SMS_CONSENT_REQUEST = 2
     }
 
-    override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
+    override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "sms_user_consent")
         channel.setMethodCallHandler(this)
     }
 
-    override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
+    override fun onMethodCall(call: MethodCall, result: Result) {
         when (call.method) {
             "requestPhoneNumber" -> {
                 requestHint()
@@ -42,20 +46,38 @@ class SmsUserConsentPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
             }
 
             "requestSms" -> {
+                val listenToBroadcastsFromOtherApps = true
+                val receiverFlags = if (listenToBroadcastsFromOtherApps) {
+                    ContextCompat.RECEIVER_EXPORTED
+                } else {
+                    ContextCompat.RECEIVER_NOT_EXPORTED
+                }
+
                 SmsRetriever.getClient(mActivity.applicationContext)
                     .startSmsUserConsent(call.argument("senderPhoneNumber"))
-                mActivity.registerReceiver(
-                    smsVerificationReceiver,
-                    IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION),
-                    SmsRetriever.SEND_PERMISSION,
-                    null
-                )
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    mActivity.registerReceiver(
+                        smsVerificationReceiver,
+                        IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION),
+                        SmsRetriever.SEND_PERMISSION,
+                        null,
+                        receiverFlags,
+                    )
+                } else {
+                    mActivity.registerReceiver(
+                        smsVerificationReceiver,
+                        IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION),
+                        SmsRetriever.SEND_PERMISSION,
+                        null,
+                    )
+                }
                 result.success(null)
             }
         }
     }
 
-    override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
     }
 
@@ -132,18 +154,33 @@ class SmsUserConsentPlugin : FlutterPlugin, MethodCallHandler, ActivityAware {
 
                 when (smsRetrieverStatus.statusCode) {
                     CommonStatusCodes.SUCCESS -> {
-                        // Get consent intent
                         try {
                             val contentIntent =
                                 extras.getParcelable<Intent>(SmsRetriever.EXTRA_CONSENT_INTENT);
+                            if (contentIntent == null) {
+                                return;
+                            }
                             // remove the grant URI permissions in the untrusted Intent
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                contentIntent?.removeFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                contentIntent?.removeFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                                contentIntent.removeFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                contentIntent.removeFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                             }
-                            // Start activity to show consent dialog to user, activity must be started in
-                            // 5 minutes, otherwise you'll receive another TIMEOUT intent
-                            mActivity.startActivityForResult(contentIntent, SMS_CONSENT_REQUEST)
+
+                            val packageManager = mActivity.packageManager;
+                            val name = contentIntent.resolveActivity(packageManager);
+                            val flags = contentIntent.flags;
+
+                            if (name != null &&
+                                name.packageName == "com.google.android.gms" &&
+                                name.className == "com.google.android.gms.auth.api.phone.ui.UserConsentPromptActivity" &&
+                                (flags and Intent.FLAG_GRANT_READ_URI_PERMISSION) == 0 &&
+                                (flags and Intent.FLAG_GRANT_WRITE_URI_PERMISSION) == 0
+                            ) {
+                                mActivity.startActivityForResult(
+                                    contentIntent,
+                                    SMS_CONSENT_REQUEST
+                                );
+                            }
                         } catch (e: ActivityNotFoundException) {
                             // Handle the exception ...
                         }
