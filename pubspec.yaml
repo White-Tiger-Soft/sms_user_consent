@@ -4,7 +4,7 @@ version: 0.1.0
 repository: https://github.com/pharshdev/sms_user_consent
 
 environment:
-  sdk: ">=3.2.0 <3.4.0"
+  sdk: ">=3.2.0 <4.0.0"
 
 dependencies:
   flutter:
