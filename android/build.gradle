@@ -3,11 +3,8 @@ version '1.0-SNAPSHOT'
 buildscript {
     ext.kotlin_version = '1.6.10'
     repositories {
-        mavenCentral()
         google()
-        maven {
-            url "https://plugins.gradle.org/m2/"
-        }
+        mavenCentral()
     }
 
     dependencies {
@@ -18,11 +15,8 @@ buildscript {
 
 rootProject.allprojects {
     repositories {
-        mavenCentral()
         google()
-        maven {
-            url "https://plugins.gradle.org/m2/"
-        }
+        mavenCentral()
     }
 }
 
@@ -30,22 +24,32 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdk 33
+    compileSdk 34
 
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
     }
+
     defaultConfig {
         minSdkVersion 24
     }
     lintOptions {
         disable 'InvalidPackage'
     }
+
+    namespace 'dev.pharsh.sms_user_consent'
 }
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation "androidx.core:core-ktx:1.12.0"
 
     // for sms user consent
     implementation 'com.google.android.gms:play-services-auth:20.2.0'
